@@ -18,3 +18,6 @@ Thumbs.db
 
 # Saida antiga do VS Code
 out/
+
+# Saida do build da Vercel na raiz
+/dist/
