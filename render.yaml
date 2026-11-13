@@ -1,0 +1,21 @@
+# Blueprint do Render (https://render.com) para a API Spring Boot.
+# As credenciais da base de dados são preenchidas no painel do Render (sync: false).
+services:
+  - type: web
+    name: sistema-acme-api
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: DB_URL
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: CORS_ORIGINS
+        value: http://localhost:5173,https://*.vercel.app
+      - key: DADOS_INICIAIS
+        value: "true"

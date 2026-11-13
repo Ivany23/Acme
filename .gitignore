@@ -1,0 +1,20 @@
+# Segredos
+.env
+.env.local
+*.env
+
+# Backend
+backend/target/
+
+# Frontend
+node_modules/
+frontend/dist/
+
+# IDE / sistema
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Saida antiga do VS Code
+out/
