@@ -1,5 +1,6 @@
 package acme.web;
 
+import acme.servico.NaoAutenticadoException;
 import acme.servico.NaoEncontradoException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +34,11 @@ public class TratadorErros {
     @ExceptionHandler(NaoEncontradoException.class)
     public ResponseEntity<Erro> naoEncontrado(NaoEncontradoException e) {
         return resposta(HttpStatus.NOT_FOUND, e.getMessage(), null);
+    }
+
+    @ExceptionHandler(NaoAutenticadoException.class)
+    public ResponseEntity<Erro> naoAutenticado(NaoAutenticadoException e) {
+        return resposta(HttpStatus.UNAUTHORIZED, e.getMessage(), null);
     }
 
     @ExceptionHandler(NoResourceFoundException.class)

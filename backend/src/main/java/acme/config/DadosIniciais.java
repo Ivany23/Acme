@@ -5,18 +5,21 @@ import acme.repositorio.*;
 import acme.servico.CalculadoraCustos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.ApplicationArguments;
-import org.springframework.boot.ApplicationRunner;
+import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalTime;
 
-/** Insere dados de demonstração quando a base de dados está vazia (desligar com DADOS_INICIAIS=false). */
+/**
+ * Insere dados de demonstração quando a base de dados está vazia (desligar com DADOS_INICIAIS=false).
+ * Corre antes de o servidor web aceitar pedidos.
+ */
 @Component
 @ConditionalOnProperty(name = "acme.dados-iniciais", havingValue = "true")
-public class DadosIniciais implements ApplicationRunner {
+public class DadosIniciais implements SmartInitializingSingleton {
 
     private static final Logger log = LoggerFactory.getLogger(DadosIniciais.class);
 
@@ -27,10 +30,12 @@ public class DadosIniciais implements ApplicationRunner {
     private final TurnoRepository turnos;
     private final EncomendaRepository encomendas;
     private final CalculadoraCustos calculadora;
+    private final TransactionTemplate transaccao;
 
     public DadosIniciais(MaterialRepository materiais, PecaRepository pecas, ClienteRepository clientes,
                          FuncionarioRepository funcionarios, TurnoRepository turnos, EncomendaRepository encomendas,
-                         CalculadoraCustos calculadora) {
+                         CalculadoraCustos calculadora, PlatformTransactionManager transaccoes) {
+        this.transaccao = new TransactionTemplate(transaccoes);
         this.materiais = materiais;
         this.pecas = pecas;
         this.clientes = clientes;
@@ -41,8 +46,11 @@ public class DadosIniciais implements ApplicationRunner {
     }
 
     @Override
-    @Transactional
-    public void run(ApplicationArguments args) {
+    public void afterSingletonsInstantiated() {
+        transaccao.executeWithoutResult(estado -> inserir());
+    }
+
+    private void inserir() {
         if (materiais.count() > 0 || pecas.count() > 0 || clientes.count() > 0) {
             return;
         }

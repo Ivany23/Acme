@@ -19,6 +19,11 @@ public final class Pedidos {
     private Pedidos() {
     }
 
+    public record LoginPedido(
+            @NotBlank(message = "O utilizador é obrigatório") String login,
+            @NotBlank(message = "A password é obrigatória") String password) {
+    }
+
     public record MaterialPedido(
             @NotBlank(message = "O nome é obrigatório") @Size(max = 255) String nome,
             @NotBlank(message = "A unidade de medida é obrigatória") @Size(max = 50) String unidadeMedida,

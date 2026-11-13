@@ -1,0 +1,55 @@
+name: Testes automatizados
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  backend:
+    name: Backend (unidade, serviços, integração, sistema)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Testes de unidade
+        run: sh mvnw -B -ntp test -Dtest='acme.unidade.**'
+      - name: Testes de serviços
+        run: sh mvnw -B -ntp test -Dtest='acme.servicos.**'
+      - name: Testes de integração
+        run: sh mvnw -B -ntp test -Dtest='acme.integracao.**'
+      - name: Testes de sistema
+        run: sh mvnw -B -ntp test -Dtest='acme.sistema.**'
+
+  frontend:
+    name: Frontend (unidade, serviços, integração, sistema)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Testes de unidade
+        run: npx vitest run testes/unidade
+      - name: Testes de serviços
+        run: npx vitest run testes/servicos
+      - name: Testes de integração
+        run: npx vitest run testes/integracao
+      - name: Testes de sistema
+        run: npx vitest run testes/sistema
+      - name: Build de produção
+        run: npm run build

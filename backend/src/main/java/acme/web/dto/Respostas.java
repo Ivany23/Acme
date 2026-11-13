@@ -15,6 +15,15 @@ public final class Respostas {
     private Respostas() {
     }
 
+    public record UtilizadorDTO(Long id, String login, String nome) {
+        public static UtilizadorDTO de(Utilizador u) {
+            return new UtilizadorDTO(u.getId(), u.getLogin(), u.getNome());
+        }
+    }
+
+    public record SessaoDTO(String token, UtilizadorDTO utilizador) {
+    }
+
     public record MaterialDTO(Long id, String nome, String unidadeMedida, double custoUnitario) {
         public static MaterialDTO de(Material m) {
             return new MaterialDTO(m.getId(), m.getNome(), m.getUnidadeMedida(), m.getCustoUnitario());

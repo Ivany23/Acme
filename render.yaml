@@ -19,3 +19,6 @@ services:
         value: http://localhost:5173,https://*.vercel.app
       - key: DADOS_INICIAIS
         value: "true"
+      # Segredo que assina as sessões de login (gerado automaticamente pelo Render)
+      - key: AUTH_SEGREDO
+        generateValue: true

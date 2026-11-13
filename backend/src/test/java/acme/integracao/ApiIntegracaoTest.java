@@ -1,4 +1,4 @@
-package acme.web;
+package acme.integracao;
 
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,9 +27,17 @@ class ApiIntegracaoTest {
 
     private MockMvc mvc;
 
+    /** Faz login como admin e envia o token em todos os pedidos seguintes. */
     @BeforeEach
-    void preparar() {
-        mvc = MockMvcBuilders.webAppContextSetup(contexto).build();
+    void preparar() throws Exception {
+        MockMvc anonimo = MockMvcBuilders.webAppContextSetup(contexto).build();
+        String sessao = anonimo.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"login\":\"admin\",\"password\":\"acme2026\"}"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        String token = JsonPath.read(sessao, "$.token");
+        mvc = MockMvcBuilders.webAppContextSetup(contexto)
+                .defaultRequest(get("/").header("Authorization", "Bearer " + token))
+                .build();
     }
 
     private String enviar(MockHttpServletRequestBuilder pedido, String json, ResultMatcher esperado) throws Exception {
