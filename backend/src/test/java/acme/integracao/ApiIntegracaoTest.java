@@ -74,10 +74,17 @@ class ApiIntegracaoTest {
         long turno = id(enviar(post("/api/turnos"),
                 "{\"denominacao\":\"Matutino\",\"horaEntrada\":\"07:00\",\"horaSaida\":\"15:00\"}", status().isCreated()));
 
-        // RF005: alocação automática
+        // RF005: a alocação automática dá exactamente um turno ao artesão nesse dia.
+        // (Qual turno depende de quantos artesãos e turnos existem, por isso não se assume.)
         enviar(post("/api/alocacoes/automatica"), "{\"data\":\"2030-01-10\"}", status().isCreated());
         mvc.perform(get("/api/alocacoes").param("data", "2030-01-10"))
-                .andExpect(jsonPath("$[?(@.artesaoId == %d)].turnoId".formatted(artesao), hasItem((int) turno)));
+                .andExpect(jsonPath("$[?(@.artesaoId == %d)]".formatted(artesao), hasSize(1)));
+        // o supervisor pode trocar manualmente: fixamos o turno deste teste para o resto do fluxo
+        enviar(post("/api/alocacoes"), "{\"artesaoId\":%d,\"turnoId\":%d,\"data\":\"2030-01-10\"}"
+                .formatted(artesao, turno), status().isCreated());
+        mvc.perform(get("/api/alocacoes").param("data", "2030-01-10"))
+                .andExpect(jsonPath("$[?(@.artesaoId == %d)].turnoId".formatted(artesao), hasItem((int) turno)))
+                .andExpect(jsonPath("$[?(@.artesaoId == %d)]".formatted(artesao), hasSize(1)));
 
         // RF008: orçamento -> 1000x2 + 250x2 + 100 = 2600 (+20%) = 3120
         mvc.perform(get("/api/encomendas/orcamento").param("pecaId", "" + pecaId).param("quantidade", "2")
