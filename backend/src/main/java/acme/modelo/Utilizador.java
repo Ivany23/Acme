@@ -76,6 +76,10 @@ public class Utilizador {
         this.cliente = cliente;
     }
 
+    public void alterarLogin(String novoLogin) {
+        this.login = Validar.obrigatorio(novoLogin, "login").trim().toLowerCase();
+    }
+
     public void alterarPasswordHash(String novoHash) {
         this.passwordHash = Validar.obrigatorio(novoHash, "passwordHash");
     }

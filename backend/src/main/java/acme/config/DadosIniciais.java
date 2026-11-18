@@ -60,6 +60,24 @@ public class DadosIniciais implements SmartInitializingSingleton {
     public void afterSingletonsInstantiated() {
         transaccao.executeWithoutResult(estado -> inserir());
         transaccao.executeWithoutResult(estado -> inserirContasDemo());
+        transaccao.executeWithoutResult(estado -> loginClienteDemoPorEmail());
+    }
+
+    /**
+     * Na área de cliente entra-se com o email. Versões anteriores criaram a conta de demonstração
+     * do cliente com o login "cliente"; passa a usar o email do cliente.
+     */
+    private void loginClienteDemoPorEmail() {
+        utilizadores.findByLogin("cliente")
+                .filter(u -> u.getPapel() == Papel.CLIENTE && u.getCliente() != null)
+                .ifPresent(u -> {
+                    String email = u.getCliente().getEmail();
+                    if (email != null && !email.isBlank() && !utilizadores.existsByLogin(email.trim().toLowerCase())) {
+                        u.alterarLogin(email);
+                        utilizadores.save(u);
+                        log.info("Conta de demonstração do cliente passa a entrar com {}", u.getLogin());
+                    }
+                });
     }
 
     /**
@@ -83,9 +101,11 @@ public class DadosIniciais implements SmartInitializingSingleton {
                 .ifPresent(a -> utilizadores.save(
                         new Utilizador("artesao", a.getNome(), hash, Papel.ARTESAO, a, null)));
         clientes.findAllByOrderByNomeAsc().stream()
-                .filter(c -> !utilizadores.existsByClienteId(c.getId()) && !utilizadores.existsByLogin("cliente"))
+                .filter(c -> c.getEmail() != null && !c.getEmail().isBlank()
+                        && !utilizadores.existsByClienteId(c.getId())
+                        && !utilizadores.existsByLogin(c.getEmail().trim().toLowerCase()))
                 .findFirst()
-                .ifPresent(c -> utilizadores.save(Utilizador.deCliente(c, "cliente", hash)));
+                .ifPresent(c -> utilizadores.save(Utilizador.deCliente(c, c.getEmail(), hash)));
     }
 
     private void inserir() {

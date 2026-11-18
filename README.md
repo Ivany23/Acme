@@ -30,7 +30,7 @@ encomenda é concluída (RF009).
 | `supervisor` | Supervisor de Turno | Turnos e alocação; produção e ponto; conclui encomendas; relatórios |
 | `vendas` | Gerente de Vendas | Clientes, orçamentos e encomendas; consulta o histórico |
 | `artesao` | Artesão (João Mondlane) | Regista a **sua** produção e o **seu** ponto |
-| `cliente` | Cliente (Ana Machava) | Área de cliente: orçamento, encomendas, estado e notificações |
+| `ana@mail.com` | Cliente (Ana Machava), entra em `/cliente/entrar` | Área de cliente: orçamento, encomendas, estado e notificações |
 
 O administrador cria mais contas em **Utilizadores**. Cada pessoa altera a sua password no botão
 **Password**. A API recusa (403) tudo o que o perfil não permite, mesmo que se tente pelo endereço.
