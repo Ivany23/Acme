@@ -133,6 +133,56 @@ class SistemaTest {
     }
 
     @Test
+    void clienteAcompanhaASuaEncomendaPeloPortal() throws Exception {
+        // a empresa tem uma peça no catálogo
+        entrar();
+        long peca = post("/pecas", "{\"nome\":\"Estante\",\"dimensoes\":\"180x80\",\"precoUnitario\":2500}").id();
+        String tokenAdmin = token;
+
+        // o cliente regista a sua conta (sem sessão)
+        token = null;
+        Resposta registo = post("/portal/registar",
+                "{\"nome\":\"Joana\",\"email\":\"joana@mail.com\",\"password\":\"segredo1\"}");
+        assertEquals(201, registo.status());
+        String tokenCliente = registo.ler("$.token");
+
+        // solicita orçamento (2500 x 2 = 5000 +20% = 6000) e encomenda
+        token = tokenCliente;
+        Resposta orc = get("/portal/orcamento?pecaId=" + peca + "&quantidade=2");
+        assertEquals(6000.0, ((Number) orc.ler("$.custoEstimado")).doubleValue(), 0.001);
+        long encomenda = post("/portal/encomendas", "{\"pecaId\":" + peca + ",\"quantidade\":2}").id();
+        assertEquals(403, get("/encomendas").status());
+
+        // a empresa confirma o pagamento e conclui a encomenda
+        token = tokenAdmin;
+        assertEquals(200, post("/encomendas/" + encomenda + "/pagamento", null).status());
+        assertEquals(200, pedido("PATCH", "/encomendas/" + encomenda + "/estado", "{\"estado\":\"CONCLUIDA\"}").status());
+
+        // o cliente vê o estado e as notificações (padrão Observer)
+        token = tokenCliente;
+        assertEquals("CONCLUIDA", get("/portal/encomendas").ler("$[0].estado"));
+        List<String> notificacoes = JsonPath.read(get("/portal/notificacoes").corpo(), "$");
+        assertEquals(2, notificacoes.size());
+        assertTrue(notificacoes.get(1).endsWith("CONCLUIDA"));
+    }
+
+    @Test
+    void cadaPerfilSoFazOQueLheCompete() throws Exception {
+        entrar();
+        assertEquals(201, post("/utilizadores",
+                "{\"login\":\"rita\",\"nome\":\"Rita\",\"papel\":\"CONTADOR\",\"password\":\"segredo1\"}").status());
+
+        Resposta login = post("/auth/login", "{\"login\":\"rita\",\"password\":\"segredo1\"}");
+        token = login.ler("$.token");
+        assertEquals("CONTADOR", login.ler("$.utilizador.papel"));
+
+        assertEquals(201, post("/materiais", "{\"nome\":\"Lixa\",\"unidadeMedida\":\"folha\",\"custoUnitario\":15}").status());
+        assertEquals(200, get("/relatorios/analise").status());
+        assertEquals(403, post("/funcionarios", "{\"tipo\":\"ARTESAO\",\"nome\":\"X\"}").status());
+        assertEquals(403, get("/utilizadores").status());
+    }
+
+    @Test
     void sessaoInvalidaEErrosDeNegocioSaoRespondidosCorrectamente() throws Exception {
         token = "token.falso";
         assertEquals(401, get("/materiais").status());

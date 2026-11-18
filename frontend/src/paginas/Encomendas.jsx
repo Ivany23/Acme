@@ -3,6 +3,7 @@ import { api, textoErro } from '../api.js'
 import { Cabecalho, Campo, Conteudo, Estado, Mensagem, Modal, useAccao, useDados } from '../componentes/ui.jsx'
 import { ESTADOS, data, dataHora, dinheiro, hora, minutos, numeroOuNulo, quantidade } from '../util.js'
 import { DetalheRelatorio } from './Relatorios.jsx'
+import { usePode } from '../sessao.jsx'
 
 function NovaEncomenda({ fechar, criada }) {
   const base = useDados(async () => {
@@ -110,14 +111,15 @@ function NovaEncomenda({ fechar, criada }) {
 }
 
 function DetalheEncomenda({ encomenda, fechar }) {
+  const podeVerRelatorio = usePode()('relatorios.ver')
   const info = useDados(async () => {
     const registos = await api.get(`/producao?encomendaId=${encomenda.id}`)
     let relatorio = null
-    if (encomenda.estado === 'CONCLUIDA') {
+    if (encomenda.estado === 'CONCLUIDA' && podeVerRelatorio) {
       relatorio = await api.get(`/relatorios/encomenda/${encomenda.id}`).catch(() => null)
     }
     return { registos, relatorio }
-  }, [encomenda.id, encomenda.estado])
+  }, [encomenda.id, encomenda.estado, podeVerRelatorio])
 
   return (
     <Modal titulo={`Encomenda #${encomenda.id}`} aberto fechar={fechar} largo>
@@ -170,6 +172,7 @@ export default function Encomendas() {
   const { executar, ocupado } = useAccao()
   const [nova, setNova] = useState(false)
   const [detalhe, setDetalhe] = useState(null)
+  const pode = usePode()
 
   async function accao(fn, mensagem) {
     const r = await executar(fn, mensagem)
@@ -189,7 +192,9 @@ export default function Encomendas() {
   return (
     <>
       <Cabecalho titulo="Encomendas" descricao="Do orçamento ao relatório final: pague para iniciar a produção e conclua quando terminar.">
-        <button type="button" className="botao principal" onClick={() => setNova(true)}>Nova encomenda</button>
+        {pode('encomendas.criar') && (
+          <button type="button" className="botao principal" onClick={() => setNova(true)}>Nova encomenda</button>
+        )}
       </Cabecalho>
 
       <div className="separadores" role="tablist">
@@ -223,22 +228,22 @@ export default function Encomendas() {
                     <td>{data(e.dataCriacao)}</td>
                     <td className="accoes">
                       <button type="button" className="botao pequeno" onClick={() => setDetalhe(e)}>Detalhes</button>
-                      {e.estado === 'PENDENTE' && (
+                      {e.estado === 'PENDENTE' && pode('encomendas.pagar') && (
                         <button type="button" className="botao pequeno sucesso" disabled={ocupado} onClick={() => pagar(e)}>Pagar</button>
                       )}
-                      {e.estado === 'EM_PRODUCAO' && (
+                      {e.estado === 'EM_PRODUCAO' && pode('encomendas.estado') && (
                         <button type="button" className="botao pequeno sucesso" disabled={ocupado}
                           onClick={() => mudarEstado(e, 'CONCLUIDA', `Concluir a encomenda #${e.id}? Será gerado o relatório de produção.`)}>
                           Concluir
                         </button>
                       )}
-                      {(e.estado === 'PENDENTE' || e.estado === 'EM_PRODUCAO') && (
+                      {(e.estado === 'PENDENTE' || e.estado === 'EM_PRODUCAO') && pode('encomendas.estado') && (
                         <button type="button" className="botao pequeno perigo" disabled={ocupado}
                           onClick={() => mudarEstado(e, 'CANCELADA', `Cancelar a encomenda #${e.id}?`)}>
                           Cancelar
                         </button>
                       )}
-                      {e.estado === 'PENDENTE' && (
+                      {e.estado === 'PENDENTE' && pode('encomendas.apagar') && (
                         <button type="button" className="botao pequeno ligacao" disabled={ocupado} onClick={() => apagar(e)}>Apagar</button>
                       )}
                     </td>

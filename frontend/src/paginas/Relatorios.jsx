@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { api } from '../api.js'
-import { Cabecalho, Conteudo, Modal, useDados } from '../componentes/ui.jsx'
+import { Cabecalho, Campo, Conteudo, Modal, useDados } from '../componentes/ui.jsx'
 import { dataHora, dinheiro, minutos, quantidade } from '../util.js'
 
 function Barras({ titulo, valores, formatar }) {
@@ -42,34 +42,104 @@ export function DetalheRelatorio({ relatorio: r }) {
   )
 }
 
-export default function Relatorios() {
-  const base = useDados(async () => {
-    const [relatorios, analise] = await Promise.all([api.get('/relatorios'), api.get('/relatorios/analise')])
-    return { relatorios, analise }
+const SEM_FILTRO = { inicio: '', fim: '', pecaId: '', artesao: '' }
+
+function parametros(filtro) {
+  const p = new URLSearchParams()
+  Object.entries(filtro).forEach(([k, v]) => { if (v !== '' && v != null) p.set(k, v) })
+  const q = p.toString()
+  return q ? `?${q}` : ''
+}
+
+/** Caso de uso "Definir Critérios de Análise" (AnalisadorDados). */
+function Criterios({ aplicado, aplicar }) {
+  const opcoes = useDados(async () => {
+    const [pecas, artesaos] = await Promise.all([api.get('/pecas'), api.get('/funcionarios/artesaos')])
+    return { pecas, artesaos }
   })
+  const [form, setForm] = useState(aplicado)
+  const alterar = (c, v) => setForm((f) => ({ ...f, [c]: v }))
+
+  function submeter(e) {
+    e.preventDefault()
+    aplicar(form)
+  }
+
+  return (
+    <form className="cartao filtros" onSubmit={submeter}>
+      <h2>Critérios de análise</h2>
+      <div className="filtros-campos">
+        <Campo rotulo="De">
+          <input type="date" value={form.inicio} onChange={(e) => alterar('inicio', e.target.value)} />
+        </Campo>
+        <Campo rotulo="Até">
+          <input type="date" value={form.fim} min={form.inicio || undefined} onChange={(e) => alterar('fim', e.target.value)} />
+        </Campo>
+        <Campo rotulo="Peça">
+          <select value={form.pecaId} onChange={(e) => alterar('pecaId', e.target.value)}>
+            <option value="">Todas</option>
+            {opcoes.dados?.pecas.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+          </select>
+        </Campo>
+        <Campo rotulo="Artesão">
+          <select value={form.artesao} onChange={(e) => alterar('artesao', e.target.value)}>
+            <option value="">Todos</option>
+            {opcoes.dados?.artesaos.map((a) => <option key={a.id} value={a.nome}>{a.nome}</option>)}
+          </select>
+        </Campo>
+        <div className="filtros-botoes">
+          <button type="submit" className="botao principal">Analisar</button>
+          <button type="button" className="botao" onClick={() => { setForm(SEM_FILTRO); aplicar(SEM_FILTRO) }}>Limpar</button>
+        </div>
+      </div>
+    </form>
+  )
+}
+
+export default function Relatorios() {
+  const [filtro, setFiltro] = useState(SEM_FILTRO)
+  const q = parametros(filtro)
+  const base = useDados(async () => {
+    const [relatorios, analise] = await Promise.all([api.get(`/relatorios${q}`), api.get(`/relatorios/analise${q}`)])
+    return { relatorios, analise }
+  }, [q])
   const [aberto, setAberto] = useState(null)
   const a = base.dados?.analise
 
   return (
     <>
       <Cabecalho
-        titulo="Relatórios"
-        descricao="Gerados automaticamente quando uma encomenda é concluída. Em baixo, a análise do histórico."
+        titulo="Relatórios e análise"
+        descricao="Os relatórios são gerados automaticamente quando uma encomenda é concluída. Defina critérios para minerar o histórico."
       />
+      <Criterios aplicado={filtro} aplicar={setFiltro} />
       <Conteudo {...base}>
         {a && (
-          <div className="indicadores">
-            <div className="indicador"><span>Encomendas analisadas</span><strong>{a.totalRelatorios}</strong></div>
-            <div className="indicador"><span>Custo real médio</span><strong>{dinheiro(a.custoMedioPorEncomenda)}</strong></div>
-            <div className="indicador"><span>Diferença média do orçamento</span><strong>{dinheiro(a.desvioMedioOrcamento)}</strong></div>
-            <div className="indicador"><span>Horas extra acumuladas</span><strong>{minutos(a.totalMinutosExtra)}</strong></div>
-            <div className="indicador"><span>Retrabalhos</span><strong>{a.totalRetrabalhos}</strong></div>
-          </div>
+          <>
+            <div className="indicadores">
+              <div className="indicador"><span>Encomendas analisadas</span><strong>{a.totalRelatorios}</strong></div>
+              <div className="indicador"><span>Custo real médio</span><strong>{dinheiro(a.custoMedioPorEncomenda)}</strong></div>
+              <div className="indicador"><span>Diferença média do orçamento</span><strong>{dinheiro(a.desvioMedioOrcamento)}</strong></div>
+              <div className="indicador"><span>Horas extra acumuladas</span><strong>{minutos(a.totalMinutosExtra)}</strong></div>
+              <div className="indicador"><span>Retrabalhos</span><strong>{a.totalRetrabalhos}</strong></div>
+            </div>
+            {a.totalRelatorios > 0 && (
+              <section className="cartao">
+                <div className="grelha-barras tres">
+                  <Barras titulo="Custo real médio por peça" valores={a.custoMedioPorPeca} formatar={dinheiro} />
+                  <Barras titulo="Tempo de produção por artesão" valores={a.minutosPorArtesao} formatar={minutos} />
+                  <Barras titulo="Horas extra a pagar por artesão" valores={a.minutosExtraPorArtesao} formatar={minutos} />
+                </div>
+              </section>
+            )}
+          </>
         )}
 
         <section className="cartao">
           {base.dados?.relatorios.length === 0 ? (
-            <div className="vazio">Ainda não há relatórios. Conclua uma encomenda para gerar o primeiro.</div>
+            <div className="vazio">
+              {q ? 'Nenhum relatório corresponde aos critérios.' : 'Ainda não há relatórios. Conclua uma encomenda para gerar o primeiro.'}
+            </div>
           ) : (
             <div className="tabela-envolvente">
               <table className="tabela">

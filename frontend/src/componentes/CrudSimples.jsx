@@ -10,10 +10,13 @@ import { Cabecalho, Campo, Conteudo, Modal, useAccao, useDados } from './ui.jsx'
  */
 export default function CrudSimples({
   titulo, descricao, recurso, nomeSingular, campos, colunas, vazio, paraFormulario, paraPedido, extraLinha,
+  podeAlterar = true,
 }) {
   const lista = useDados(() => api.get(`/${recurso}`), [recurso])
   const { executar, ocupado } = useAccao()
   const [edicao, setEdicao] = useState(null) // { id?, form }
+
+  const temAccoes = podeAlterar || Boolean(extraLinha)
 
   const formVazio = () => Object.fromEntries(campos.map((c) => [c.nome, c.inicial ?? '']))
 
@@ -59,7 +62,9 @@ export default function CrudSimples({
   return (
     <>
       <Cabecalho titulo={titulo} descricao={descricao}>
-        <button type="button" className="botao principal" onClick={abrirNovo}>Novo {nomeSingular.toLowerCase()}</button>
+        {podeAlterar && (
+          <button type="button" className="botao principal" onClick={abrirNovo}>Novo {nomeSingular.toLowerCase()}</button>
+        )}
       </Cabecalho>
 
       <section className="cartao">
@@ -69,18 +74,26 @@ export default function CrudSimples({
               <thead>
                 <tr>
                   {colunas.map((c) => <th key={c.rotulo} className={c.classe}>{c.rotulo}</th>)}
-                  <th className="accoes">Acções</th>
+                  {temAccoes && <th className="accoes">Acções</th>}
                 </tr>
               </thead>
               <tbody>
                 {lista.dados?.map((linha) => (
                   <tr key={linha.id}>
                     {colunas.map((c) => <td key={c.rotulo} className={c.classe}>{c.valor(linha)}</td>)}
-                    <td className="accoes">
-                      {extraLinha && extraLinha(linha)}
-                      <button type="button" className="botao pequeno" onClick={() => abrirEdicao(linha)}>Editar</button>
-                      <button type="button" className="botao pequeno perigo" onClick={() => apagar(linha)} disabled={ocupado}>Apagar</button>
-                    </td>
+                    {temAccoes && (
+                      <td className="accoes">
+                        {extraLinha && extraLinha(linha)}
+                        {podeAlterar && (
+                          <>
+                            <button type="button" className="botao pequeno" onClick={() => abrirEdicao(linha)}>Editar</button>
+                            <button type="button" className="botao pequeno perigo" onClick={() => apagar(linha)} disabled={ocupado}>
+                              Apagar
+                            </button>
+                          </>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

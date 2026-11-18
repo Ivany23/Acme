@@ -26,10 +26,13 @@ public class PessoasService {
     private final AlocacaoTurnoRepository alocacoes;
     private final RegistoProducaoRepository registos;
     private final RegistoPontoRepository pontos;
+    private final UtilizadorRepository utilizadores;
 
     public PessoasService(ClienteRepository clientes, FuncionarioRepository funcionarios, ArtesaoRepository artesaos,
                           EncomendaRepository encomendas, AlocacaoTurnoRepository alocacoes,
-                          RegistoProducaoRepository registos, RegistoPontoRepository pontos) {
+                          RegistoProducaoRepository registos, RegistoPontoRepository pontos,
+                          UtilizadorRepository utilizadores) {
+        this.utilizadores = utilizadores;
         this.clientes = clientes;
         this.funcionarios = funcionarios;
         this.artesaos = artesaos;
@@ -70,6 +73,9 @@ public class PessoasService {
         Cliente c = cliente(id);
         if (encomendas.existsByClienteId(id)) {
             throw new IllegalStateException("O cliente tem encomendas e não pode ser apagado");
+        }
+        if (utilizadores.existsByClienteId(id)) {
+            throw new IllegalStateException("O cliente tem uma conta de acesso; apague primeiro a conta em Utilizadores");
         }
         clientes.delete(c);
         clientes.flush();
@@ -121,6 +127,9 @@ public class PessoasService {
         Funcionario f = funcionario(id);
         if (alocacoes.existsByArtesaoId(id) || registos.existsByArtesaoId(id) || pontos.existsByArtesaoId(id)) {
             throw new IllegalStateException("O artesão tem turnos, produção ou ponto registados e não pode ser apagado");
+        }
+        if (utilizadores.existsByFuncionarioId(id)) {
+            throw new IllegalStateException("O funcionário tem uma conta de acesso; apague primeiro a conta em Utilizadores");
         }
         funcionarios.delete(f);
         funcionarios.flush();

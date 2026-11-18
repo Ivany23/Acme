@@ -1,12 +1,15 @@
 import CrudSimples from '../componentes/CrudSimples.jsx'
+import { usePode } from '../sessao.jsx'
 
 const eArtesao = (f) => f.tipo === 'ARTESAO'
 
 export default function Funcionarios() {
+  const pode = usePode()
   return (
     <CrudSimples
       titulo="Funcionários"
       descricao="Pessoal contratado. Os artesãos são alocados aos turnos e registam produção e ponto."
+      podeAlterar={pode('funcionarios.alterar')}
       recurso="funcionarios"
       nomeSingular="Funcionário"
       vazio="Nenhum funcionário registado."

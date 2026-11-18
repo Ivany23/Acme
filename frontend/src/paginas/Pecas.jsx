@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { api } from '../api.js'
 import { Cabecalho, Campo, Conteudo, Mensagem, Modal, useAccao, useDados } from '../componentes/ui.jsx'
 import { dinheiro, numeroOuNulo, quantidade } from '../util.js'
+import { usePode } from '../sessao.jsx'
 
 const formVazio = { nome: '', dimensoes: '', precoUnitario: '', materiais: [], etapas: [] }
 
@@ -94,6 +95,7 @@ export default function Pecas() {
   })
   const { executar, ocupado } = useAccao()
   const [edicao, setEdicao] = useState(null)
+  const podeAlterar = usePode()('pecas.alterar')
 
   function editar(p) {
     setEdicao({
@@ -128,9 +130,11 @@ export default function Pecas() {
   return (
     <>
       <Cabecalho titulo="Peças" descricao="Catálogo de peças, com os materiais e as etapas necessárias ao fabrico.">
-        <button type="button" className="botao principal" onClick={() => setEdicao({ id: null, form: formVazio })}>
-          Nova peça
-        </button>
+        {podeAlterar && (
+          <button type="button" className="botao principal" onClick={() => setEdicao({ id: null, form: formVazio })}>
+            Nova peça
+          </button>
+        )}
       </Cabecalho>
 
       <Conteudo {...base} vazio={base.dados?.pecas.length === 0} textoVazio="Nenhuma peça registada.">
@@ -159,10 +163,12 @@ export default function Pecas() {
                   )}
                 </dd>
               </dl>
-              <div className="peca-accoes">
-                <button type="button" className="botao pequeno" onClick={() => editar(p)}>Editar</button>
-                <button type="button" className="botao pequeno perigo" onClick={() => apagar(p)} disabled={ocupado}>Apagar</button>
-              </div>
+              {podeAlterar && (
+                <div className="peca-accoes">
+                  <button type="button" className="botao pequeno" onClick={() => editar(p)}>Editar</button>
+                  <button type="button" className="botao pequeno perigo" onClick={() => apagar(p)} disabled={ocupado}>Apagar</button>
+                </div>
+              )}
             </article>
           ))}
         </div>

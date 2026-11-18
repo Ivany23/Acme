@@ -2,6 +2,15 @@ import { useEffect, useState } from 'react'
 import { api } from '../api.js'
 import { Cabecalho, Campo, Conteudo, Mensagem, Modal, useAccao, useDados } from '../componentes/ui.jsx'
 import { data, dinheiro, hoje, hora, minutos, numeroOuNulo, quantidade } from '../util.js'
+import { usePode, useSessao } from '../sessao.jsx'
+
+/** Se a sessão for de um artesão, devolve o id dele (só pode registar em seu nome). */
+function useArtesaoDaSessao() {
+  const { sessao } = useSessao()
+  const u = sessao?.utilizador
+  return u?.papel === 'ARTESAO' ? u.funcionarioId : null
+}
+
 
 function NovoRegisto({ fechar, criado }) {
   const base = useDados(async () => {
@@ -19,6 +28,7 @@ function NovoRegisto({ fechar, criado }) {
     horaInicio: '', horaFim: '', custosIndirectos: 0, retrabalho: false, materiais: [],
   })
   const [etapas, setEtapas] = useState([])
+  const proprio = useArtesaoDaSessao()
   const alterar = (campo, valor) => setForm((f) => ({ ...f, [campo]: valor }))
 
   // valores iniciais quando os dados chegam
@@ -27,10 +37,10 @@ function NovoRegisto({ fechar, criado }) {
     setForm((f) => ({
       ...f,
       encomendaId: f.encomendaId || base.dados.encomendas[0]?.id || '',
-      artesaoId: f.artesaoId || base.dados.artesaos[0]?.id || '',
+      artesaoId: proprio ?? (f.artesaoId || base.dados.artesaos[0]?.id || ''),
       turnoId: f.turnoId || base.dados.turnos[0]?.id || '',
     }))
-  }, [base.dados])
+  }, [base.dados, proprio])
 
   // etapas e materiais previstos da peça da encomenda escolhida
   useEffect(() => {
@@ -109,8 +119,10 @@ function NovoRegisto({ fechar, criado }) {
                 </select>
               </Campo>
               <Campo rotulo="Artesão" largura={2}>
-                <select value={form.artesaoId} onChange={(e) => alterar('artesaoId', e.target.value)} required>
-                  {d?.artesaos.map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}
+                <select value={form.artesaoId} onChange={(e) => alterar('artesaoId', e.target.value)} required
+                  disabled={proprio != null}>
+                  {d?.artesaos.filter((x) => proprio == null || x.id === proprio)
+                    .map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}
                 </select>
               </Campo>
               <Campo rotulo="Turno" largura={2}>
@@ -178,6 +190,9 @@ export default function Producao() {
   const lista = useDados(() => api.get('/producao'))
   const { executar, ocupado } = useAccao()
   const [novo, setNovo] = useState(false)
+  const podeRegistar = usePode()('producao.registar')
+  const proprio = useArtesaoDaSessao()
+  const podeApagar = (r) => podeRegistar && (proprio == null || r.artesaoId === proprio)
 
   async function apagar(r) {
     if (!window.confirm('Apagar este registo de produção?')) return
@@ -188,7 +203,9 @@ export default function Producao() {
   return (
     <>
       <Cabecalho titulo="Registo de produção" descricao="O que cada artesão fez, em que etapa, quanto tempo levou e que material gastou.">
-        <button type="button" className="botao principal" onClick={() => setNovo(true)}>Registar produção</button>
+        {podeRegistar && (
+          <button type="button" className="botao principal" onClick={() => setNovo(true)}>Registar produção</button>
+        )}
       </Cabecalho>
 
       <section className="cartao">
@@ -217,7 +234,9 @@ export default function Producao() {
                     </td>
                     <td className="numero">{dinheiro(r.custoMateriais + r.custosIndirectos)}</td>
                     <td className="accoes">
-                      <button type="button" className="botao pequeno perigo" disabled={ocupado} onClick={() => apagar(r)}>Apagar</button>
+                      {podeApagar(r) && (
+                        <button type="button" className="botao pequeno perigo" disabled={ocupado} onClick={() => apagar(r)}>Apagar</button>
+                      )}
                     </td>
                   </tr>
                 ))}

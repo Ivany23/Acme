@@ -51,8 +51,62 @@ function apiCompleta() {
     'GET /pecas': () => [peca],
     'GET /materiais': () => [material],
     'GET /clientes': () => [{ id: 1, nome: 'Ana Machava', email: 'ana@mail.com', telefone: '845556677' }],
+    'GET /utilizadores': () => [{
+      id: 1, login: 'admin', nome: 'Administrador', papel: 'ADMINISTRADOR', papelDescricao: 'Administrador',
+      funcionarioId: null, funcionarioNome: null, clienteId: null, clienteNome: null,
+    }],
   })
 }
+
+function renderApp(rota) {
+  return render(
+    <MemoryRouter initialEntries={[rota]}>
+      <SessaoProvider><AvisosProvider><App /></AvisosProvider></SessaoProvider>
+    </MemoryRouter>,
+  )
+}
+
+describe('menus por perfil', () => {
+  it('o artesão só vê o que lhe compete e regista apenas em seu nome', async () => {
+    sessaoActiva({ id: 7, login: 'artesao', nome: 'João Mondlane', papel: 'ARTESAO', funcionarioId: 1 })
+    apiCompleta()
+    renderApp('/')
+    await screen.findByRole('heading', { name: 'Olá, João Mondlane' })
+
+    const menu = screen.getByRole('navigation')
+    for (const visivel of ['Encomendas', 'Registo de produção', 'Registo de ponto', 'Peças']) {
+      expect(within(menu).getByRole('link', { name: visivel })).toBeInTheDocument()
+    }
+    for (const escondido of ['Relatórios e análise', 'Clientes', 'Funcionários', 'Utilizadores']) {
+      expect(within(menu).queryByRole('link', { name: escondido })).not.toBeInTheDocument()
+    }
+
+    // na página de materiais não há botões para alterar custos
+    await userEvent.click(within(menu).getByRole('link', { name: 'Materiais' }))
+    await screen.findByText('Madeira')
+    expect(screen.queryByRole('button', { name: 'Novo material' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Apagar' })).not.toBeInTheDocument()
+  })
+
+  it('o contador não vê a gestão de utilizadores nem por endereço directo', async () => {
+    sessaoActiva({ id: 3, login: 'contador', nome: 'Rita', papel: 'CONTADOR' })
+    apiCompleta()
+    renderApp('/utilizadores')
+    expect(await screen.findByRole('heading', { name: 'Sem acesso' })).toBeInTheDocument()
+  })
+
+  it('um cliente que abre a área da empresa é levado para a área de cliente', async () => {
+    sessaoActiva({ id: 9, login: 'ana@mail.com', nome: 'Ana', papel: 'CLIENTE', clienteId: 1 })
+    servidorFalso({
+      'GET /portal/encomendas': () => [],
+      'GET /portal/notificacoes': () => [],
+      'GET /portal/pecas': () => [],
+    })
+    renderApp('/materiais')
+    expect(await screen.findByRole('heading', { name: 'Olá, Ana' })).toBeInTheDocument()
+    expect(screen.getByText('Área de cliente')).toBeInTheDocument()
+  })
+})
 
 // Teste de SISTEMA do frontend: a aplicação inteira, navegando pelo menu como um utilizador
 describe('navegação pela aplicação', () => {
@@ -72,7 +126,8 @@ describe('navegação pela aplicação', () => {
       ['Registo de produção', 'Registo de produção', 'Corte'],
       ['Registo de ponto', 'Registo de ponto', '1h'],
       ['Turnos e alocação', 'Turnos e alocação', 'Alocação de artesãos'],
-      ['Relatórios', 'Relatórios', '#1'],
+      ['Relatórios e análise', 'Relatórios e análise', '#1'],
+      ['Utilizadores', 'Utilizadores', 'admin'],
       ['Peças', 'Peças', '45x45x90 cm'],
       ['Materiais', 'Materiais', 'Madeira'],
       ['Clientes', 'Clientes', 'ana@mail.com'],

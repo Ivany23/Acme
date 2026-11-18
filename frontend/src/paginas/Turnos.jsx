@@ -1,10 +1,13 @@
 import { useState } from 'react'
 import CrudSimples from '../componentes/CrudSimples.jsx'
+import { usePode } from '../sessao.jsx'
 import { Conteudo, useAccao, useAvisos, useDados } from '../componentes/ui.jsx'
 import { api } from '../api.js'
 import { data as formatarData, hoje, hora, minutos } from '../util.js'
 
 function Alocacao() {
+  const pode = usePode()
+  const podeAlocar = pode('turnos.alterar')
   const [dia, setDia] = useState(hoje())
   const { executar, ocupado } = useAccao()
   const { avisar } = useAvisos()
@@ -45,9 +48,11 @@ function Alocacao() {
         </div>
         <div className="linha-accoes">
           <input type="date" value={dia} onChange={(e) => setDia(e.target.value)} aria-label="Dia" />
-          <button type="button" className="botao principal" onClick={automatica} disabled={ocupado}>
-            Alocar automaticamente
-          </button>
+          {podeAlocar && (
+            <button type="button" className="botao principal" onClick={automatica} disabled={ocupado}>
+              Alocar automaticamente
+            </button>
+          )}
         </div>
       </div>
 
@@ -68,7 +73,7 @@ function Alocacao() {
                       <select
                         value={actual?.turnoId ?? ''}
                         onChange={(e) => mudar(a.id, e.target.value)}
-                        disabled={ocupado}
+                        disabled={ocupado || !podeAlocar}
                         aria-label={`Turno de ${a.nome}`}
                         className={actual ? '' : 'sem-valor'}
                       >
@@ -92,12 +97,14 @@ function Alocacao() {
 }
 
 export default function Turnos() {
+  const pode = usePode()
   return (
     <>
       <CrudSimples
         titulo="Turnos e alocação"
         descricao="Horários de trabalho e distribuição diária dos artesãos."
-        recurso="turnos"
+        podeAlterar={pode('turnos.alterar')}
+      recurso="turnos"
         nomeSingular="Turno"
         vazio="Nenhum turno registado."
         campos={[

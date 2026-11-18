@@ -15,9 +15,21 @@ public final class Respostas {
     private Respostas() {
     }
 
-    public record UtilizadorDTO(Long id, String login, String nome) {
+    public record UtilizadorDTO(Long id, String login, String nome, Papel papel, String papelDescricao,
+                                Long funcionarioId, String funcionarioNome, Long clienteId, String clienteNome) {
         public static UtilizadorDTO de(Utilizador u) {
-            return new UtilizadorDTO(u.getId(), u.getLogin(), u.getNome());
+            Funcionario f = u.getFuncionario();
+            Cliente c = u.getCliente();
+            return new UtilizadorDTO(u.getId(), u.getLogin(), u.getNome(), u.getPapel(), u.getPapel().getDescricao(),
+                    f == null ? null : f.getId(), f == null ? null : f.getNome(),
+                    c == null ? null : c.getId(), c == null ? null : c.getNome());
+        }
+    }
+
+    /** Peça tal como é mostrada ao cliente no portal (sem custos internos). */
+    public record PecaCatalogoDTO(Long id, String nome, String dimensoes, double precoUnitario) {
+        public static PecaCatalogoDTO de(Peca p) {
+            return new PecaCatalogoDTO(p.getId(), p.getNome(), p.getDimensoes(), p.getPrecoUnitario());
         }
     }
 
@@ -150,10 +162,12 @@ public final class Respostas {
     }
 
     public record AnaliseDTO(int totalRelatorios, double custoMedioPorEncomenda, long totalMinutosExtra,
-                             double desvioMedioOrcamento, long totalRetrabalhos) {
+                             double desvioMedioOrcamento, long totalRetrabalhos, Map<String, Double> custoMedioPorPeca,
+                             Map<String, Long> minutosPorArtesao, Map<String, Long> minutosExtraPorArtesao) {
         public static AnaliseDTO de(AnalisadorDados a) {
             return new AnaliseDTO(a.totalRelatorios(), a.custoMedioPorEncomenda(), a.totalMinutosExtra(),
-                    a.desvioMedioOrcamento(), a.totalRetrabalhos());
+                    a.desvioMedioOrcamento(), a.totalRetrabalhos(), a.custoMedioPorPeca(), a.minutosPorArtesao(),
+                    a.minutosExtraPorArtesao());
         }
     }
 

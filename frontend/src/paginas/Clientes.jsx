@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import CrudSimples from '../componentes/CrudSimples.jsx'
+import { usePode } from '../sessao.jsx'
 import { Conteudo, Modal, useDados } from '../componentes/ui.jsx'
 import { api } from '../api.js'
 
@@ -17,12 +18,14 @@ function Notificacoes({ cliente, fechar }) {
 }
 
 export default function Clientes() {
+  const pode = usePode()
   const [verNotificacoes, setVerNotificacoes] = useState(null)
   return (
     <>
       <CrudSimples
         titulo="Clientes"
         descricao="Quem encomenda peças. Cada cliente é avisado quando o estado das suas encomendas muda."
+        podeAlterar={pode('clientes.alterar')}
         recurso="clientes"
         nomeSingular="Cliente"
         vazio="Nenhum cliente registado."

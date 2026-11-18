@@ -1,11 +1,22 @@
 import { Link } from 'react-router-dom'
 import { api } from '../api.js'
 import { Cabecalho, Conteudo, Estado, useDados } from '../componentes/ui.jsx'
-import { useSessao } from '../sessao.jsx'
+import { usePode, useSessao } from '../sessao.jsx'
+import { PAPEIS } from '../permissoes.js'
 import { ESTADOS, data, dinheiro, minutos } from '../util.js'
+
+/** Indicador do painel; só é ligação se o perfil puder abrir a página. */
+function Indicador({ para, accao, rotulo, valor }) {
+  const pode = usePode()
+  const conteudo = <><span>{rotulo}</span><strong>{valor}</strong></>
+  return pode(accao)
+    ? <Link to={para} className="indicador ligado">{conteudo}</Link>
+    : <div className="indicador">{conteudo}</div>
+}
 
 export default function Painel() {
   const { sessao } = useSessao()
+  const pode = usePode()
   const base = useDados(async () => {
     const [resumo, encomendas] = await Promise.all([api.get('/dashboard'), api.get('/encomendas')])
     return { resumo, encomendas }
@@ -16,20 +27,20 @@ export default function Painel() {
 
   return (
     <>
-      <Cabecalho titulo={`Olá, ${sessao?.utilizador?.nome ?? ''}`} descricao="Resumo da oficina." />
+      <Cabecalho titulo={`Olá, ${sessao?.utilizador?.nome ?? ''}`}
+        descricao={`Resumo da oficina · perfil: ${PAPEIS[sessao?.utilizador?.papel] ?? ''}`} />
       <Conteudo {...base}>
         {r && (
           <>
             <div className="indicadores">
-              <Link to="/encomendas" className="indicador ligado">
-                <span>Encomendas</span><strong>{totalEncomendas}</strong>
-              </Link>
-              <Link to="/clientes" className="indicador ligado"><span>Clientes</span><strong>{r.totalClientes}</strong></Link>
-              <Link to="/pecas" className="indicador ligado"><span>Peças no catálogo</span><strong>{r.totalPecas}</strong></Link>
-              <Link to="/funcionarios" className="indicador ligado"><span>Artesãos</span><strong>{r.totalArtesaos}</strong></Link>
-              <Link to="/relatorios" className="indicador ligado">
-                <span>Custo real médio</span><strong>{dinheiro(r.analise.custoMedioPorEncomenda)}</strong>
-              </Link>
+              <Indicador para="/encomendas" accao="encomendas.ver" rotulo="Encomendas" valor={totalEncomendas} />
+              <Indicador para="/clientes" accao="clientes.ver" rotulo="Clientes" valor={r.totalClientes} />
+              <Indicador para="/pecas" accao="pecas.ver" rotulo="Peças no catálogo" valor={r.totalPecas} />
+              <Indicador para="/funcionarios" accao="funcionarios.ver" rotulo="Artesãos" valor={r.totalArtesaos} />
+              {pode('relatorios.ver') && (
+                <Indicador para="/relatorios" accao="relatorios.ver" rotulo="Custo real médio"
+                  valor={dinheiro(r.analise.custoMedioPorEncomenda)} />
+              )}
             </div>
 
             <div className="duas-colunas">
@@ -47,9 +58,11 @@ export default function Painel() {
                     </li>
                   ))}
                 </ul>
-                <p className="descricao">
-                  Horas extra registadas em encomendas concluídas: {minutos(r.analise.totalMinutosExtra)}
-                </p>
+                {pode('relatorios.ver') && (
+                  <p className="descricao">
+                    Horas extra registadas em encomendas concluídas: {minutos(r.analise.totalMinutosExtra)}
+                  </p>
+                )}
               </section>
 
               <section className="cartao">

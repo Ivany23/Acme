@@ -24,6 +24,37 @@ public final class Pedidos {
             @NotBlank(message = "A password é obrigatória") String password) {
     }
 
+    public record AlterarPasswordPedido(
+            @NotBlank(message = "A password actual é obrigatória") String actual,
+            @NotBlank(message = "A nova password é obrigatória")
+            @Size(min = 6, max = 100, message = "A nova password deve ter pelo menos 6 caracteres") String nova) {
+    }
+
+    /** Registo de conta feito pelo próprio cliente no portal. */
+    public record RegistoClientePedido(
+            @NotBlank(message = "O nome é obrigatório") @Size(max = 255) String nome,
+            @NotBlank(message = "O email é obrigatório") @Email(message = "O email não é válido") @Size(max = 100) String email,
+            @Size(max = 50) String telefone,
+            @NotBlank(message = "A password é obrigatória")
+            @Size(min = 6, max = 100, message = "A password deve ter pelo menos 6 caracteres") String password) {
+    }
+
+    /** Conta de acesso criada ou alterada pelo administrador. Password vazia na edição = manter. */
+    public record UtilizadorPedido(
+            @NotBlank(message = "O login é obrigatório") @Size(max = 100) String login,
+            @NotBlank(message = "O nome é obrigatório") @Size(max = 255) String nome,
+            @NotNull(message = "O papel é obrigatório") acme.modelo.Papel papel,
+            Long funcionarioId,
+            Long clienteId,
+            @Size(max = 100) String password) {
+    }
+
+    public record EncomendaClientePedido(
+            @NotNull(message = "A peça é obrigatória") Long pecaId,
+            @NotNull(message = "A quantidade é obrigatória")
+            @Positive(message = "A quantidade deve ser maior que zero") Integer quantidade) {
+    }
+
     public record MaterialPedido(
             @NotBlank(message = "O nome é obrigatório") @Size(max = 255) String nome,
             @NotBlank(message = "A unidade de medida é obrigatória") @Size(max = 50) String unidadeMedida,

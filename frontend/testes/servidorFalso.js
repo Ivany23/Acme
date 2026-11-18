@@ -28,9 +28,10 @@ export function servidorFalso(rotas) {
   return { chamadas, fetchFalso }
 }
 
-export function sessaoActiva() {
+/** Guarda uma sessão no browser simulado. Por omissão, a do administrador. */
+export function sessaoActiva(utilizador = {}) {
   localStorage.setItem('acme.sessao', JSON.stringify({
     token: 'token-de-teste',
-    utilizador: { id: 1, login: 'admin', nome: 'Administrador' },
+    utilizador: { id: 1, login: 'admin', nome: 'Administrador', papel: 'ADMINISTRADOR', ...utilizador },
   }))
 }

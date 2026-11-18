@@ -4,12 +4,13 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import Materiais from '../../src/paginas/Materiais.jsx'
 import { AvisosProvider } from '../../src/componentes/ui.jsx'
+import { SessaoProvider } from '../../src/sessao.jsx'
 import { servidorFalso, sessaoActiva } from '../servidorFalso.js'
 
 function renderPagina() {
   return render(
     <MemoryRouter>
-      <AvisosProvider><Materiais /></AvisosProvider>
+      <SessaoProvider><AvisosProvider><Materiais /></AvisosProvider></SessaoProvider>
     </MemoryRouter>,
   )
 }

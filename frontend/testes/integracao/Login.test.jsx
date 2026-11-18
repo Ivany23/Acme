@@ -36,7 +36,7 @@ describe('login', () => {
   it('entra com credenciais válidas e mostra o painel', async () => {
     const { chamadas } = servidorFalso({
       'GET /estado': () => ({ estado: 'OK' }),
-      'POST /auth/login': () => ({ token: 'abc', utilizador: { id: 1, login: 'admin', nome: 'Administrador' } }),
+      'POST /auth/login': () => ({ token: 'abc', utilizador: { id: 1, login: 'admin', nome: 'Administrador', papel: 'ADMINISTRADOR' } }),
       'GET /dashboard': () => resumo,
       'GET /encomendas': () => [],
     })

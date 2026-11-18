@@ -72,6 +72,18 @@ public class ProducaoService {
         return RegistoProducaoDTO.de(registos.save(r));
     }
 
+    @Transactional(readOnly = true)
+    public Long artesaoDoRegisto(Long id) {
+        return registos.findById(id).map(r -> r.getArtesao().getId())
+                .orElseThrow(() -> new NaoEncontradoException("Registo de produção", id));
+    }
+
+    @Transactional(readOnly = true)
+    public Long artesaoDoPonto(Long id) {
+        return pontos.findById(id).map(p -> p.getArtesao().getId())
+                .orElseThrow(() -> new NaoEncontradoException("Registo de ponto", id));
+    }
+
     public void apagarRegisto(Long id) {
         RegistoProducao r = registos.findById(id).orElseThrow(() -> new NaoEncontradoException("Registo de produção", id));
         if (r.getEncomenda().getEstado() != EstadoEncomenda.EM_PRODUCAO) {

@@ -39,8 +39,8 @@ public class RelatorioService {
         this.encomendas = encomendas;
     }
 
-    public List<RelatorioDTO> listar() {
-        return relatorios.findAllByOrderByDataGeracaoDesc().stream().map(RelatorioDTO::de).toList();
+    public List<RelatorioDTO> listar(CriteriosAnalise criterios) {
+        return analisador(criterios).getRelatorios().stream().map(RelatorioDTO::de).toList();
     }
 
     public RelatorioDTO daEncomenda(Long encomendaId) {
@@ -48,8 +48,18 @@ public class RelatorioService {
                 .orElseThrow(() -> new NaoEncontradoException("Relatório da encomenda", encomendaId));
     }
 
-    public AnaliseDTO analise() {
-        return AnaliseDTO.de(new AnalisadorDados(relatorios.findAll()));
+    /** RF009: minera os dados históricos segundo os critérios de análise definidos. */
+    public AnaliseDTO analise(CriteriosAnalise criterios) {
+        return AnaliseDTO.de(analisador(criterios));
+    }
+
+    private AnalisadorDados analisador(CriteriosAnalise criterios) {
+        String artesao = null;
+        if (criterios.artesao() != null && !criterios.artesao().isBlank()) {
+            artesao = criterios.artesao().trim();
+        }
+        CriteriosAnalise c = new CriteriosAnalise(criterios.inicio(), criterios.fim(), criterios.pecaId(), artesao);
+        return new AnalisadorDados(relatorios.findAllByOrderByDataGeracaoDesc()).filtrar(c);
     }
 
     public DashboardDTO dashboard() {
@@ -58,6 +68,6 @@ public class RelatorioService {
             porEstado.put(e, encomendas.countByEstado(e));
         }
         return new DashboardDTO(clientes.count(), pecas.count(), materiais.count(), funcionarios.count(),
-                artesaos.count(), turnos.count(), porEstado, analise());
+                artesaos.count(), turnos.count(), porEstado, analise(CriteriosAnalise.TODOS));
     }
 }

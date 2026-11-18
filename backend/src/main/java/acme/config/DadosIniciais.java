@@ -6,6 +6,7 @@ import acme.servico.CalculadoraCustos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.SmartInitializingSingleton;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -31,11 +32,21 @@ public class DadosIniciais implements SmartInitializingSingleton {
     private final EncomendaRepository encomendas;
     private final CalculadoraCustos calculadora;
     private final TransactionTemplate transaccao;
+    private final UtilizadorRepository utilizadores;
+    private final ArtesaoRepository artesaos;
+    private final PasswordEncoder encoder;
+    private final String passwordDemo;
 
     public DadosIniciais(MaterialRepository materiais, PecaRepository pecas, ClienteRepository clientes,
                          FuncionarioRepository funcionarios, TurnoRepository turnos, EncomendaRepository encomendas,
-                         CalculadoraCustos calculadora, PlatformTransactionManager transaccoes) {
+                         CalculadoraCustos calculadora, PlatformTransactionManager transaccoes,
+                         UtilizadorRepository utilizadores, ArtesaoRepository artesaos, PasswordEncoder encoder,
+                         @org.springframework.beans.factory.annotation.Value("${acme.admin.password:acme2026}") String passwordDemo) {
         this.transaccao = new TransactionTemplate(transaccoes);
+        this.utilizadores = utilizadores;
+        this.artesaos = artesaos;
+        this.encoder = encoder;
+        this.passwordDemo = passwordDemo;
         this.materiais = materiais;
         this.pecas = pecas;
         this.clientes = clientes;
@@ -48,6 +59,33 @@ public class DadosIniciais implements SmartInitializingSingleton {
     @Override
     public void afterSingletonsInstantiated() {
         transaccao.executeWithoutResult(estado -> inserir());
+        transaccao.executeWithoutResult(estado -> inserirContasDemo());
+    }
+
+    /**
+     * Uma conta por actor do TG1, para demonstração (password igual à do administrador).
+     * Só é criada uma vez: se a conta "director" já existir, nada é feito.
+     */
+    private void inserirContasDemo() {
+        if (utilizadores.existsByLogin("director")) {
+            return;
+        }
+        log.info("A criar contas de demonstração (director, contador, supervisor, vendas, artesao, cliente)");
+        String hash = encoder.encode(passwordDemo);
+        utilizadores.save(new Utilizador("director", "Director-Geral", hash, Papel.DIRECTOR_GERAL));
+        utilizadores.save(new Utilizador("contador", "Contador", hash, Papel.CONTADOR));
+        utilizadores.save(new Utilizador("supervisor", "Supervisor de Turno", hash, Papel.SUPERVISOR));
+        utilizadores.save(new Utilizador("vendas", "Gerente de Vendas", hash, Papel.GERENTE_VENDAS));
+
+        artesaos.findAllByOrderByIdAsc().stream()
+                .filter(a -> !utilizadores.existsByFuncionarioId(a.getId()))
+                .findFirst()
+                .ifPresent(a -> utilizadores.save(
+                        new Utilizador("artesao", a.getNome(), hash, Papel.ARTESAO, a, null)));
+        clientes.findAllByOrderByNomeAsc().stream()
+                .filter(c -> !utilizadores.existsByClienteId(c.getId()) && !utilizadores.existsByLogin("cliente"))
+                .findFirst()
+                .ifPresent(c -> utilizadores.save(Utilizador.deCliente(c, "cliente", hash)));
     }
 
     private void inserir() {

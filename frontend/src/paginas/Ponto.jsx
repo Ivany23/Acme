@@ -2,6 +2,15 @@ import { useState } from 'react'
 import { api } from '../api.js'
 import { Cabecalho, Campo, Conteudo, Modal, useAccao, useDados } from '../componentes/ui.jsx'
 import { data as formatarData, hoje, hora, minutos } from '../util.js'
+import { usePode, useSessao } from '../sessao.jsx'
+
+/** Se a sessão for de um artesão, devolve o id dele (só pode registar em seu nome). */
+function useArtesaoDaSessao() {
+  const { sessao } = useSessao()
+  const u = sessao?.utilizador
+  return u?.papel === 'ARTESAO' ? u.funcionarioId : null
+}
+
 
 function NovoPonto({ dia, fechar, criado }) {
   const base = useDados(async () => {
@@ -11,7 +20,8 @@ function NovoPonto({ dia, fechar, criado }) {
   const { executar, ocupado } = useAccao()
   const [form, setForm] = useState({ artesaoId: '', turnoId: '', data: dia, horaEntrada: '', horaSaida: '' })
   const alterar = (campo, valor) => setForm((f) => ({ ...f, [campo]: valor }))
-  const artesaoId = form.artesaoId || base.dados?.artesaos[0]?.id || ''
+  const proprio = useArtesaoDaSessao()
+  const artesaoId = proprio ?? (form.artesaoId || base.dados?.artesaos[0]?.id || '')
 
   async function submeter(e) {
     e.preventDefault()
@@ -31,8 +41,10 @@ function NovoPonto({ dia, fechar, criado }) {
         <form onSubmit={submeter}>
           <div className="grelha-form">
             <Campo rotulo="Artesão" largura={2}>
-              <select value={artesaoId} onChange={(e) => alterar('artesaoId', e.target.value)} required>
-                {base.dados?.artesaos.map((a) => <option key={a.id} value={a.id}>{a.nome}</option>)}
+              <select value={artesaoId} onChange={(e) => alterar('artesaoId', e.target.value)} required
+                disabled={proprio != null}>
+                {base.dados?.artesaos.filter((a) => proprio == null || a.id === proprio)
+                  .map((a) => <option key={a.id} value={a.id}>{a.nome}</option>)}
               </select>
             </Campo>
             <Campo rotulo="Turno" largura={2} ajuda="Se não escolher, é usado o turno alocado nesse dia.">
@@ -66,6 +78,9 @@ export default function Ponto() {
   const lista = useDados(() => api.get(`/ponto?data=${dia}`), [dia])
   const { executar, ocupado } = useAccao()
   const [novo, setNovo] = useState(false)
+  const podeRegistar = usePode()('ponto.registar')
+  const proprio = useArtesaoDaSessao()
+  const podeApagar = (p) => podeRegistar && (proprio == null || p.artesaoId === proprio)
 
   async function apagar(p) {
     if (!window.confirm(`Apagar o ponto de ${p.artesaoNome}?`)) return
@@ -79,7 +94,9 @@ export default function Ponto() {
     <>
       <Cabecalho titulo="Registo de ponto" descricao="Entradas e saídas dos artesãos. As horas extra são calculadas pela duração do turno.">
         <input type="date" value={dia} onChange={(e) => setDia(e.target.value)} aria-label="Dia" />
-        <button type="button" className="botao principal" onClick={() => setNovo(true)}>Registar ponto</button>
+        {podeRegistar && (
+          <button type="button" className="botao principal" onClick={() => setNovo(true)}>Registar ponto</button>
+        )}
       </Cabecalho>
 
       <section className="cartao">
@@ -103,7 +120,9 @@ export default function Ponto() {
                     <td>{minutos(p.minutosTrabalhados)}</td>
                     <td>{p.minutosExtra > 0 ? <span className="etiqueta laranja">{minutos(p.minutosExtra)}</span> : '—'}</td>
                     <td className="accoes">
-                      <button type="button" className="botao pequeno perigo" disabled={ocupado} onClick={() => apagar(p)}>Apagar</button>
+                      {podeApagar(p) && (
+                        <button type="button" className="botao pequeno perigo" disabled={ocupado} onClick={() => apagar(p)}>Apagar</button>
+                      )}
                     </td>
                   </tr>
                 ))}
